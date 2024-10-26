@@ -65,10 +65,10 @@ $(document).ready(function() {
         notifications.push({
             id: `notif-${Date.now()}`,  // Create a unique ID for each notification
             message: data.message,
+            appointment_id: data.appointment_id,
             patientImageUrl: data.patient_image_url,
             timestamp: timestamp
         });
-
         // Render the new notification
         renderNotification(notifications[notifications.length - 1]);
     };
@@ -118,35 +118,105 @@ $(document).ready(function() {
 
         const viewLinks = document.querySelectorAll('.view-appointment');
     
+        // viewLinks.forEach(link => {
+        //     link.addEventListener('click', function(event) {
+        //         event.preventDefault();
+        //         const id = this.getAttribute('data-id');
+        //         document.getElementById('notif_id').value = id;
+        //         const APIurl = this.getAttribute('data-url');
+        //         // Make an AJAX request to fetch the form
+        //         $.ajax({
+        //             url: APIurl,  // The URL for the form view
+        //             data: {
+        //                 'id': id  // Pass the payment ID to the server
+        //             },
+        //             type: 'GET',
+        //             dataType: 'json',
+        //             success: function(response) {
+        //                 // Update the modal body with the form HTML
+        //                 $('#modal-notif-form-body').html(response.form);
+        //                 $('#modal-notif-form-body select').each(function() {
+        //                     $(this).select2({
+        //                         dropdownParent: $('#view_modal')
+        //                     });  // Reinitialize Select2 for each select element
+        //                 });
+        //             },
+        //             error: function(xhr, status, error) {
+        //                 console.error('Error fetching the form:', error);
+        //             }
+        //         });
+        //     });
+        // });
         viewLinks.forEach(link => {
             link.addEventListener('click', function(event) {
                 event.preventDefault();
                 const id = this.getAttribute('data-id');
                 document.getElementById('notif_id').value = id;
                 const APIurl = this.getAttribute('data-url');
-                // Make an AJAX request to fetch the form
-                $.ajax({
-                    url: APIurl,  // The URL for the form view
-                    data: {
-                        'id': id  // Pass the payment ID to the server
-                    },
-                    type: 'GET',
-                    dataType: 'json',
-                    success: function(response) {
-                        // Update the modal body with the form HTML
-                        $('#modal-notif-form-body').html(response.form);
-                        $('#modal-notif-form-body select').each(function() {
-                            $(this).select2({
-                                dropdownParent: $('#view_modal')
-                            });  // Reinitialize Select2 for each select element
-                        });
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error fetching the form:', error);
-                    }
-                });
+                fetchAppointmentDetails(id, APIurl);
             });
         });
+    }
+
+    function fetchAppointmentDetails(appointmentId, APIurl) {
+        fetch(APIurl + '?id=' + appointmentId, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                // Include CSRF token if needed
+                // 'X-CSRFToken': getCookie('csrftoken')
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            updateModalContent(data.appointment_data);
+        })
+        .catch(error => {
+            console.error('Error fetching appointment details:', error);
+        }); 
+    }
+    
+    function updateModalContent(appointmentDetails) {
+        const modalBody = document.querySelector('#modal-notif-form-body');
+        modalBody.innerHTML = `
+            <div class="appointment-card">
+                <input type="hidden" name="id" id="id" value=${appointmentDetails.id}>
+                <img src="${appointmentDetails.patient_image_url}" alt="Patient" class="patient-image">
+                <div class="appointment-info">
+                    <h3 class="patient-name">${appointmentDetails.patient_name}</h3>
+                    <p class="appointment-date">
+                        <i class="far fa-calendar"></i> ${appointmentDetails.date}
+                    </p>
+                    <p class="appointment-time">
+                        <i class="far fa-clock"></i> ${formatTime(appointmentDetails.start_time)} - ${formatTime(appointmentDetails.end_time)}
+                    </p>
+                    <p class="appointment-treatments">
+                        <i class="fas fa-tooth"></i> ${appointmentDetails.treatments.join(', ') || 'No treatments specified'}
+                    </p>
+                    <p class="appointment-notes">
+                        <i class="far fa-comment-alt"></i> ${appointmentDetails.notes || 'No additional notes'}
+                    </p>
+                </div>
+            </div>
+        `;
+        const submitButton = document.getElementById('btn-notif-submit');
+        const cancelButton = document.getElementById('btn-notif-cancel-appointment');
+
+        // Update the button's data attributes with appointment details
+        submitButton.dataset.appointmentId = appointmentDetails.id;
+        submitButton.dataset.reason = "";
+        submitButton.dataset.status = 'Confirmed';
+
+        cancelButton.dataset.appointmentId = appointmentDetails.id;
+        cancelButton.dataset.reason = "";
+        cancelButton.dataset.status = 'Cancelled';
+
+        // ... rest of the function (buttons setup, etc.)
     }
 
     function formatTime(timeString) {
@@ -229,7 +299,6 @@ $(document).ready(function() {
 
         
     }
-
-
+    
     fetch_Unread_Notif();
 });

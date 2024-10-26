@@ -96,6 +96,21 @@ class Dentist(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Staff(models.Model):
+    user_account = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    name = models.CharField(max_length=200)
+    gender = models.CharField(max_length=10, choices=[
+        ('Male', 'Male'),
+        ('Female', 'Female'),
+    ])
+    address = models.CharField(max_length=100)
+    contact_no = models.CharField(max_length=15)
+    email = models.EmailField()
+    image = models.ImageField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
 
 class TimeSlot(models.Model):
     DAY_CHOICES = [
@@ -137,6 +152,7 @@ class Appointment(models.Model):
     end_time = models.TimeField(blank=True, null=True)
     notes = models.CharField(blank=True, null=True)
     status = models.CharField(default="Pending")
+    cancellation_reason = models.TextField(blank=True, null=True)
     date_sent = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

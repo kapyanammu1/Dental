@@ -128,7 +128,7 @@
 								<!--begin::Actions-->
 								<div class="d-flex justify-content-end">
 									<button type="reset" class="btn btn-light btn-active-light-primary me-2" data-kt-menu-dismiss="true" data-kt-customer-table-filter="reset">Reset</button>
-									<button type="submit" class="btn btn-primary" data-kt-menu-dismiss="true" data-kt-customer-table-filter="filter">Apply</button>
+									<button type="submit" class="btn btn-primary" data-url="/patients_list/" data-bs-toggle="modal" data-bs-target="#add_modal" data-kt-menu-dismiss="true" data-kt-customer-table-filter="filter">Apply</button>
 								</div>
 								<!--end::Actions-->
 							</div>
@@ -194,7 +194,7 @@
 									<div class="symbol symbol-circle symbol-50px overflow-hidden me-3">
 										<a href="{% url 'View_Patient' a.pk %}">
 											<div class="symbol-label">
-												<img src="{{ a.image.url }}" alt="Max Smith" class="w-100" />
+												<img src="{{ a.image.url }}" alt="" class="w-100" />
 											</div>
 										</a>
 									</div>
@@ -205,7 +205,6 @@
 										<!--end::Title-->
 									</div>
 								</div>
-								
 							</td>
 							<td>{{ a.gender }}</td>
 							<td>
@@ -330,7 +329,7 @@
 						</div>
 						<div class="modal-footer flex-center">
 							<button type="reset" id="btn-cancel" class="btn btn-light me-3">Discard</button>
-							<button type="submit" id="btn-submit" class="btn btn-primary">
+							<button type="submit" id="btn-submit" class="btn btn-primary" data-url="/patients_list/">
 								<span class="indicator-label">Submit</span>
 								<span class="indicator-progress">Please wait... 
 								<span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>

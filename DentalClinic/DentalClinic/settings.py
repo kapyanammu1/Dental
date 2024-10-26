@@ -41,11 +41,14 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'xtianized1@gmail.com'
 EMAIL_HOST_PASSWORD = 'vbhsnepylcaicsmg'
 DEFAULT_FROM_EMAIL = 'xtianized1@gmail.com'
-FRONTEND_URL = 'http://127.0.0.1:8000'
+FRONTEND_URL = 'http://localhost:8080'
+BACKEND_URL = 'http://127.0.0.1:8000'
 
 
 
-
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -80,10 +83,29 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:8000",
-#     "http://yourdomain.com",
-# ]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
+
+# Remove or comment out the Redis configuration if you're not using it
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             'hosts': [('127.0.0.1', 6379)],  # Use Redis for handling channels
+#         },
+#     },
+# }
+
 ROOT_URLCONF = 'DentalClinic.urls'
 
 TEMPLATES = [
@@ -98,19 +120,11 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
+                'DentalApp.context_processors.display_clinic_info',
             ],
         },
     },
 ]
-
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [('127.0.0.1', 6379)],  # Use Redis for handling channels
-        },
-    },
-}
 
 LOGGING = {
     'version': 1,
@@ -125,7 +139,7 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'INFO',
         },
-        'your_app_name': {  # Replace 'your_app_name' with the name of your Django app
+        'DentalApp': {
             'handlers': ['console'],
             'level': 'INFO',
         },

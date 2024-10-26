@@ -41,10 +41,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     async def send_notification(self, event):
         # Send notification to WebSocket
         message = event['message']
+        appointment_id = event['appointment_id']
         patient_image_url = event['patient_image_url']
         timestamp = event['timestamp'] 
         await self.send(text_data=json.dumps({
             'message': message,
             'patient_image_url': patient_image_url,
             'timestamp': timestamp,
+            'appointment_id': appointment_id,
         }))

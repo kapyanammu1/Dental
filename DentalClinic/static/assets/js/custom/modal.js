@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function() {
             $.ajax({
                 url: APIurl,  // The URL for the form view
                 data: {
-                    'id': id  // Pass the payment ID to the server
+                    'id': id  
                 },
                 type: 'GET',
                 dataType: 'json',
@@ -20,11 +20,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     $('#modal-form-body select').each(function() {
                         $(this).select2({
                             dropdownParent: $('#add_modal')
-                        });  // Reinitialize Select2 for each select element
+                        }); 
                     });
-                    // document.getElementById('id_appointment_date').value = moment().format('YYYY-MM-DD');
-                    // document.getElementById('id_start_time').value = '08:00:00';
-                    // document.getElementById('id_end_time').value = '11:00:00';
                 },
                 error: function(xhr, status, error) {
                     console.error('Error fetching the form:', error);

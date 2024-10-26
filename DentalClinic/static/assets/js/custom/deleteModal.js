@@ -72,6 +72,15 @@ var DeleteManager = function() {
         });
     };
 
+    var setupSearchFunctionality = () => {
+        const searchInput = document.querySelector('[data-kt-customer-table-filter="search"]');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function(e) {
+                dataTable.search(e.target.value).draw();
+            });
+        }
+    };
+
     return {
         init: function(tableName) {
             TableElement = document.querySelector(`#${tableName}`);
@@ -93,6 +102,7 @@ var DeleteManager = function() {
                 });
                 
                 setupDeleteHandler();
+                setupSearchFunctionality(); // Add this line to initialize search functionality
             }
         }
     };

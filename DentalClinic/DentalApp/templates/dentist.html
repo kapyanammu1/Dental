@@ -186,7 +186,23 @@
 						<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 						{% for a in dentist %}
 						<tr data-pk="{{ a.pk }}">
-							<td>{{ a.name }}</td>
+							<td>
+								<div class="d-flex align-items-center">
+									<!--begin:: Avatar -->
+									<div class="symbol symbol-circle symbol-50px overflow-hidden me-3">
+										<a href="#">
+											<div class="symbol-label">
+												<img src="{{ a.image.url }}" alt="" class="w-100" />
+											</div>
+										</a>
+									</div>
+									<!--end::Avatar-->
+									<div class="ms-5">
+										<!--begin::Title-->
+										<a href="#" class="text-gray-800 text-hover-primary mb-1">{{ a.name }}</a>
+										<!--end::Title-->
+									</div>
+							</td>
 							<td>{{ a.gender }}</td>
 							<!-- <td data-filter="mastercard">
 							<img src="{% static 'assets/media/svg/card-logos/mastercard.svg' %}" class="w-35px me-3" alt="" />{{ a.date_of_birth }}</td> -->
@@ -262,7 +278,7 @@
 						</div>
 						<div class="modal-footer flex-center">
 							<button type="reset" id="btn-cancel" class="btn btn-light me-3">Discard</button>
-							<button type="submit" id="btn-submit" class="btn btn-primary">
+							<button type="submit" id="btn-submit" class="btn btn-primary" data-url="/Dentist_list/">
 								<span class="indicator-label">Submit</span>
 								<span class="indicator-progress">Please wait... 
 								<span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>

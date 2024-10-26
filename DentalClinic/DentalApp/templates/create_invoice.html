@@ -48,6 +48,12 @@
 							<form method="post" enctype="multipart/form-data" id="kt_invoice_form">
 								<!--begin::Wrapper-->
 								{% csrf_token %}
+								{{ invoice_form.errors }}
+								{% if invoice_form.errors %}
+									{% for error in invoice_form.errors %}
+										<p class="text-danger">{{ error }}</p>
+									{% endfor %}
+								{% endif %}
 								<div class="d-flex flex-column align-items-start flex-xxl-row">
 									<!--begin::Input group-->
 									<div class="d-flex align-items-center flex-equal fw-row me-4 order-2" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Select Patient">
@@ -72,6 +78,11 @@
 								<!--end::Separator-->
 								<!--begin::Wrapper-->
 								<div class="mb-0">
+									{% if invoice_items_formset.errors %}
+										{% for error in invoice_items_formset.errors %}
+											<p class="text-danger">{{ error }}</p>
+										{% endfor %}
+									{% endif %}
 									<!--begin::Table wrapper-->
 									<div class="table-responsive mb-10">
 										<!--begin::Table-->

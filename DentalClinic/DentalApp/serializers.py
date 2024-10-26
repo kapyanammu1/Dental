@@ -14,7 +14,13 @@ class UserAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'password1', 'password2']
+        fields = [
+            'username', 
+            'password1', 
+            'password2', 
+            'is_patient', 
+            'is_dentist', 
+            'is_staff']
 
     def validate(self, data):
         if data['password1'] != data['password2']:
@@ -68,7 +74,7 @@ class PatientSerializer(serializers.ModelSerializer):
         token = signer.sign(patient.email)
 
         # Send email with confirmation link
-        confirmation_link = f"{settings.FRONTEND_URL}/confirm-email/{token}/"
+        confirmation_link = f"{settings.BACKEND_URL}/confirm-email/{token}/"
         send_mail(
             'Email Confirmation',
             f'Please confirm your email by clicking the link: {confirmation_link}',

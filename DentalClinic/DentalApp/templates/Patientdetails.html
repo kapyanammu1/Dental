@@ -65,53 +65,56 @@
 						<div class="separator separator-dashed my-3"></div>
 						<!--begin::Details content-->
 						<div class="card card-flush mb-6 mb-xl-6">
-							<!--begin::Card header-->
 							<div class="card-header mt-6">
-								<!--begin::Card title-->
 								<div class="card-title flex-column">
 									<h2 class="mb-1">Appointments</h2>
-									<div class="fs-6 fw-semibold text-muted">Total {{ appointments.count }} appointment/s</div>
+									<div class="fs-6 fw-semibold text-muted">Total {{ appointments.count }} appointment{{ appointments.count|pluralize:"/s" }}</div>
 								</div>
-								<!--end::Card title-->
-								<!--begin::Card toolbar-->
 								<div class="card-toolbar">
-									<button type="button" class="btn btn-light-primary btn-sm" onclick="window.location.href='{% url 'Calendar' %}'">
-									<i class="ki-duotone ki-add-files fs-3">
-										<span class="path1"></span>
-										<span class="path2"></span>
-										<span class="path3"></span>
-									</i>View Calendar</button>
+									<a href="{% url 'Calendar' %}" class="btn btn-light-primary btn-sm">
+										<i class="ki-duotone ki-calendar fs-3 me-2">
+											<span class="path1"></span>
+											<span class="path2"></span>
+											<span class="path3"></span>
+										</i>View Calendar
+									</a>
 								</div>
-								<!--end::Card toolbar-->
 							</div>
-							<!--end::Card header-->
-							<!--begin::Card body-->
-							<div class="card-body d-flex flex-column">
-								<!--begin::Item-->
+							<div class="card-body">
 								{% for a in appointments %}
-								<div class="d-flex align-items-center position-relative mb-7">
-									<!--begin::Label-->
-									<div class="position-absolute top-0 start-0 rounded h-100 bg-secondary w-4px"></div>
-									<!--end::Label-->
-									<!--begin::Details-->
-									<div class="fw-semibold ms-5">
-										<a href="#" class="view-appointment fs-5 fw-bold text-gray-900 text-hover-primary" 
-										id="btn-viewModal"
-										data-id="{{a.pk}}"
-										data-url="/get-appointment-form/" 
-										data-bs-toggle="modal"
-										data-bs-target="#view_modal">Appointment with {{ a.dentist }}</a>
-										<!--begin::Info-->
-										<div class="fs-7 text-muted">{{ a.appointment_date|date:"F j, Y" }}</div>
-										<div>{{ a.start_time|date:"g:i A" }} - {{ a.end_time|date:"g:i A" }}</div>
-										<!--end::Info-->
+								<div class="d-flex align-items-center mb-8">
+									<div class="flex-grow-1 me-2">
+										<!-- <a href="#" class="view-appointment fs-6 fw-bold text-gray-900 text-hover-primary mb-1 d-block"
+										   id="btn-viewModal"
+										   data-id="{{ a.pk }}"
+										   data-url="/get-appointment-form/" 
+										   data-bs-toggle="modal"
+										   data-bs-target="#view_modal">
+											Appointment with {{ a.dentist }}
+										</a> -->
+										<span class="view-appointment fs-6 fw-bold text-gray-900 mb-1 d-block">
+											Appointment with {{ a.dentist }}
+										</span>
+										<span class="text-muted fw-semibold d-block">{{ a.appointment_date|date:"F j, Y" }}</span>
+										<span class="text-muted fw-semibold">{{ a.start_time|date:"g:i A" }} - {{ a.end_time|date:"g:i A" }}</span>
 									</div>
-									<!--end::Details-->
+									{% if a.status == 'Confirmed' %}
+										<div class="badge badge-light-success">Confirmed</div>
+									{% elif a.status == 'Pending' %}
+										<div class="badge badge-light-danger">Pending</div>
+									{% elif a.status == 'Cancelled' %}
+										<div class="badge badge-light-danger">Cancelled</div>
+									{% elif a.status == 'No Show' %}
+										<div class="badge badge-light-danger">No Show</div>
+									{% endif %}
+									<!-- <span class="badge badge-light-primary fs-8 fw-bold">Upcoming</span> -->
+								</div>
+								{% empty %}
+								<div class="text-center py-10">
+									<span class="text-muted fs-6 fw-semibold">No appointments scheduled</span>
 								</div>
 								{% endfor %}
-								<!--end::Item-->
 							</div>
-							<!--end::Card body-->
 						</div>
 						<!--end::Details content-->
 					</div>
@@ -339,7 +342,7 @@
 												</div>
 												<!--begin::Edit-->
 												<label class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow" data-kt-image-input-action="change" data-bs-toggle="tooltip" title="Change avatar">
-													<i class="ki-duotone ki-pencil fs-7">
+													<i class="ki-duotone ki-update-file fs-7">
 														<span class="path1"></span>
 														<span class="path2"></span>
 													</i>
@@ -349,17 +352,23 @@
 													<!--end::Inputs-->
 												</label>
 												<!--end::Edit-->
-												<!--begin::Cancel-->
-												<span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow" data-kt-image-input-action="cancel" data-bs-toggle="tooltip" title="Cancel avatar">
-													<i class="ki-duotone ki-cross fs-2">
+												<button id="edit-avatar" class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow" data-bs-toggle="tooltip" title="Crop avatar" style="position: absolute; top: 18px; left: 106%; transform: translateX(-106%);">
+													<i class="ki-duotone ki-pencil fs-7">
 														<span class="path1"></span>
 														<span class="path2"></span>
 													</i>
-												</span>
-												<!--end::Cancel-->
+												</button>
+												<!-- Add this button for canceling the crop -->
+												<button id="cancel-crop" class="btn btn-icon btn-circle btn-active-color-danger w-25px h-25px bg-body shadow" data-bs-toggle="tooltip" title="Cancel crop" style="position: absolute; top: 49px; left: 106%; transform: translateX(-106%); display: none;">
+													<i class="ki-duotone ki-cross fs-5">
+														<span class="path1"></span>
+														<span class="path2"></span>
+													</i>
+												</button>
+												
 												<!--begin::Remove-->
 												<span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow" data-kt-image-input-action="remove" data-bs-toggle="tooltip" title="Remove avatar">
-													<i class="ki-duotone ki-cross fs-2">
+													<i class="ki-duotone ki-eraser fs-2">
 														<span class="path1"></span>
 														<span class="path2"></span>
 													</i>
@@ -369,7 +378,7 @@
 											
 											<!--end::Image input-->
 										</div>
-										<button id="save-cropped-image" class="btn btn-primary">Save Cropped Image</button>
+										<button id="save-cropped-image" class="btn btn-primary" style="display: none;">Save Cropped Image</button>
 										<!--end::Image input wrapper-->
 									</div>
 									<!--end::Input group-->

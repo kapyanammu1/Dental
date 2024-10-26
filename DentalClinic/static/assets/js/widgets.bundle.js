@@ -8848,23 +8848,77 @@ var KTChartsWidget29 = function() {
     KTChartsWidget29.init()
 }));
 
+function updatePendingAppointments() {
+    $.ajax({
+        url: '/pending-appointments/',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            var appointmentsList = $('#pending-appointments-list');
+            appointmentsList.empty();
+
+            if (response.appointments.length === 0) {
+                appointmentsList.append('<div class="text-center text-gray-500">No pending appointments</div>');
+            } else {
+                response.appointments.forEach(function(appointment, index) {
+                    var appointmentHtml = `
+                        <div class="d-flex align-items-center mb-6">
+                            <div class="d-flex flex-column flex-grow-1">
+                                <h5 class="fw-bold text-gray-800 mb-1">${appointment.patient_name}</h5>
+                                <div class="text-muted fs-7">${appointment.treatment}</div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <span class="badge badge-light-primary fs-8">${appointment.date}</span>
+                                    <span class="text-primary fw-semibold fs-7">${appointment.time}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    appointmentsList.append(appointmentHtml);
+
+                    if (index < response.appointments.length - 1) {
+                        appointmentsList.append('<div class="separator separator-dashed my-4"></div>');
+                    }
+                });
+
+                appointmentsList.append(`
+                    <div class="separator separator-dashed my-4"></div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-gray-600 fs-7">Total Pending Appointments</span>
+                        <span class="text-gray-800 fw-bolder fs-6">${response.appointments.length}</span>
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error fetching pending appointments:', error);
+            $('#pending-appointments-list').html('<div class="text-center text-danger">Error loading appointments</div>');
+        }
+    });
+}
+
 var KTChartsWidget3 = function() {
     var e = {
             self: null,
             rendered: !1
         },
-        t = function(e) {
+        t = function(e, filter) {
             var t = document.getElementById("kt_charts_widget_3");
             if (t) {
                 $.ajax({
                     url: '/chartData/',  // The URL for the form view
                     type: 'GET',
                     dataType: 'json',
+                    data: {
+                        'filter': filter || 'this_month'
+                    },
                     success: function(response) {
                         const paymentData = response.data;
                         const label = response.labels;
-                        console.log(paymentData);
-                        console.log(label);
+                        const total_payments = response.total_payments;
+
+                        $('#revenue-amount').text(total_payments);
+                        // console.log(paymentData);
+                        // console.log(label);
                         var a = parseInt(KTUtil.css(t, "height")),
                             l = KTUtil.getCssVariableValue("--bs-gray-500"),
                             r = KTUtil.getCssVariableValue("--bs-border-dashed-color"),
@@ -9006,16 +9060,60 @@ var KTChartsWidget3 = function() {
             }
         };
     return {
-        init: function() {
-            t(e), KTThemeMode.on("kt.thememode.change", (function() {
-                e.rendered && e.self.destroy(), t(e)
-            }))
+        init: function(filter) {
+            t(e, filter);
+            updatePendingAppointments();
+        },
+        update: function(filter) {
+            if (e.rendered) {
+                e.self.destroy();
+            }
+            t(e, filter);
+            updatePendingAppointments();
         }
     }
 }();
+
+var now = new Date();
+$('#filter_description').text(now.toLocaleString('en-US', { month: 'long' }) + ' ' + now.getFullYear());
+
+$('#this_week').click(function() {
+    KTChartsWidget3.update('this_week');
+    $('#Revenue_title').text('Revenue This Week');
+    $('#filter_description').text(function() {
+        var startOfYear = new Date(now.getFullYear(), 0, 1);
+        var weekNumber = Math.ceil((((now - startOfYear) / 86400000) + startOfYear.getDay() + 1) / 7);
+        
+        var startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        var endOfWeek = new Date(now);
+        endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
+        
+        var options = { month: 'short', day: 'numeric' };
+        return ' (' + 
+               startOfWeek.toLocaleDateString('en-US', options) + ' - ' + 
+               endOfWeek.toLocaleDateString('en-US', options) + ')';
+    });
+});
+
+$('#this_month').click(function() {
+    KTChartsWidget3.update('this_month');
+    $('#Revenue_title').text('Revenue This Month');
+    $('#filter_description').text(now.toLocaleString('en-US', { month: 'long' }) + ' ' + now.getFullYear());
+});
+
+$('#this_year').click(function() {
+    KTChartsWidget3.update('this_year');
+    $('#Revenue_title').text('Revenue This Year');
+    $('#filter_description').text(now.getFullYear());
+
+});
+
 "undefined" != typeof module && (module.exports = KTChartsWidget3), KTUtil.onDOMContentLoaded((function() {
     KTChartsWidget3.init()
 }));
+
+
 var KTChartsWidget30 = {
     init: function() {
         ! function() {

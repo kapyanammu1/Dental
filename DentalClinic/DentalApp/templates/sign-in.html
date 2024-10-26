@@ -61,7 +61,7 @@
 						{% block content %}
 						<div class="w-lg-500px p-10">
 							<!--begin::Form-->
-							<form method="post" class="form w-100" id="kt_sign_in_form">
+							<form method="post" action="{% url 'login' %}" class="form w-100" id="kt_sign_in_form">
 								<!--begin::Heading-->
 								<div class="text-center mb-11">
 									<!--begin::Title-->
@@ -98,9 +98,14 @@
 									<span class="w-125px text-gray-500 fw-semibold fs-7">Or with email</span>
 								</div>
 								{% csrf_token %}
-								{{ form.as_p }}
-								{% if form.errors or form.non_field_errors %}
-									<div class="mb-3 p-6 bg-red-100 round-xl">Username/Password Incorrect! Please try again!</div>
+								<p><input type="text" placeholder="Username" name="username" autocomplete="off" class="form-control bg-transparent" /></p>
+								<p><input type="password" placeholder="Password" name="password" autocomplete="off" class="form-control bg-transparent" /></p>
+								{% if messages %}
+								<div class="alert alert-danger">
+									{% for message in messages %}
+										{{ message }}
+									{% endfor %}
+								</div>
 								{% endif %}
 								<!--end::Wrapper-->
 								<!--begin::Submit button-->

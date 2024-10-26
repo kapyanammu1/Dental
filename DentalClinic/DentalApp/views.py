@@ -1,9 +1,9 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash, logout, get_user_model
+from django.contrib.auth import update_session_auth_hash, logout, get_user_model, authenticate, login
 from django.contrib import messages
-from .models import Notification, Dentist, Clinic_Info, Event, Patient, Appointment, Treatment, Payment, MedicalHistory, Invoice_items, Invoice
-from .forms import ClinicForm, DentistForm, CustomUserChangeForm, SignupForm, PatientForm, AppointmentForm, TreatmentForm, PaymentForm, MedicalHistoryForm, InvoiceForm, Invoice_itemsForm
+from .models import CustomUser, Staff, Notification, Dentist, Clinic_Info, Event, Patient, Appointment, Treatment, Payment, MedicalHistory, Invoice_items, Invoice
+from .forms import ChangePasswordForm, ClinicForm, StaffForm, DentistForm, CustomUserChangeForm, SignupForm, PatientForm, AppointmentForm, TreatmentForm, PaymentForm, MedicalHistoryForm, InvoiceForm, Invoice_itemsForm
 from django.forms import modelformset_factory
 from django.http import JsonResponse, Http404, HttpResponse
 from django.db.models import F, Sum
@@ -29,8 +29,23 @@ from django.core.signing import Signer, BadSignature
 from datetime import timedelta, datetime
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+import calendar
+from django.contrib.humanize.templatetags.humanize import intcomma
 
 User = get_user_model()
+
+def display_clinic_info(request):
+    try:
+        clinic = Clinic_Info.objects.first()  # Assuming you have only one clinic
+        return {
+            'clinic_info': {
+                'name': clinic.clinic_name,
+                'logo': clinic.logo.url if clinic.logo else None,
+                # Add other clinic fields as needed
+            }
+        }
+    except Clinic_Info.DoesNotExist:
+        return {'clinic_info': None}
 
 # class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 #     def validate(self, attrs):
@@ -47,15 +62,35 @@ User = get_user_model()
 # class CustomTokenObtainPairView(TokenObtainPairView):
 #     serializer_class = CustomTokenObtainPairSerializer
 
-@api_view(['GET'])
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        user = self.user
+        try:
+            patient = Patient.objects.get(user_account=user)
+        except Patient.DoesNotExist:
+            raise serializers.ValidationError({"detail": "You do not have permission to access this system."})
+        
+        # Add patient info to the token payload
+        data['patient_id'] = patient.id
+        data['patient_name'] = f"{patient.first_name} {patient.last_name}"
+        data['is_verified'] = patient.user_account.is_email_verified
+        
+        return data
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
 def confirm_email(request, token):
     signer = Signer()
     try:
         email = signer.unsign(token)
-        user = User.objects.get(email=email)
+        patient = Patient.objects.get(email=email)
+        user = patient.user_account
         user.is_email_verified = True
         user.save()
-        return HttpResponse("Email confirmed successfully!")
+        return HttpResponse(f"Email confirmed successfully! Click here to login. <a href='{settings.FRONTEND_URL}/sign-in.html'>Login</a>")
+        # return redirect(f"{settings.FRONTEND_URL}/email-confirmed?status=success")
     except (BadSignature, User.DoesNotExist):
         return HttpResponse("Invalid confirmation link.", status=400)
 
@@ -248,13 +283,13 @@ class AppointmentAPIView(APIView):
                     patient=patient,
                     message=f"New appointment request from {request.user.username}"
                 )
-                
                 # Send a real-time notification via channels
                 channel_layer = get_channel_layer()
                 async_to_sync(channel_layer.group_send)(
                     f"user_{user.id}",  # Adjust according to your admin's ID
                     {
                         "type": "send_notification",
+                        'appointment_id': appointment.id,
                         "message": f"{patient.first_name} {patient.last_name}",
                         "patient_image_url": patient.image.url,
                         "timestamp": timezone.now().isoformat(),
@@ -312,7 +347,21 @@ def logout_view(request):
     return redirect('login')
 
 def signIn(request):
-
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            # Check if the user is associated with a Dentist or Staff
+            if Dentist.objects.filter(user_account=user).exists() or Staff.objects.filter(user_account=user).exists():
+                login(request, user)
+                return redirect('index')  # or wherever you want to redirect after login
+            else:
+                messages.error(request, 'You do not have permission to access this system.')
+        else:
+            messages.error(request, 'Invalid login credentials.')
     return render(request, 'sign-in.html')
 
 def signUp(request):
@@ -395,20 +444,25 @@ def confirm_signup(request):
 @login_required
 def dashboard(request):
     now = timezone.now()
+    start_of_week = now - timedelta(days=now.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
 
     #treatment
     top_treatments = (
         Invoice_items.objects
-        .select_related('treatment')  # Fetch related treatment details
-        .values('treatment__name')  # Group by treatment name
-        .annotate(total_price=Sum('price'))  # Sum the qty for each treatment
-        .order_by('-total_price')[:3]  # Get the top 3 treatments
+        .select_related('treatment')
+        .values('treatment__name')
+        .annotate(total_price=Sum('price'))
+        .order_by('-total_price')[:3]
     )
+
+    total_top_treatments = top_treatments.aggregate(total_price=Sum('total_price'))['total_price']
 
     #Appointments
     upcoming_appointments = Appointment.objects.filter(
-        appointment_date__gt=now.date()
+        appointment_date=now.date()
     ).order_by('appointment_date', 'start_time')
+    print(upcoming_appointments)
 
     #patients
     patients = Patient.objects.all()
@@ -416,51 +470,120 @@ def dashboard(request):
     additional_patients = patients.count() - 6
 
     #payments
-    payments = Payment.objects.all().aggregate(total_payments=Sum('payment'))
+    # payments = Payment.objects.filter(payment_date__date=now.date()).aggregate(total_payments=Sum('payment'))
+    payments = Payment.objects.filter(
+        payment_date__gte=start_of_week,
+        payment_date__lte=end_of_week
+    ).aggregate(total_payments=Sum('payment'))
 
     context = {
         'top_treatments': top_treatments,
+        'total_top_treatments': total_top_treatments,
         'top6_patient': top6_patient,
         'patients': patients,
         'additional_patients': additional_patients,
         'upcoming_appointments': upcoming_appointments,
         'payments': payments,
     }
-    return render(request, 'ecommerce.html', context)
+    return render(request, 'dashboard.html', context)
 
 @login_required
 def getchartData(request):
-    payments = Payment.objects.all()
+
+    now = timezone.now()
+    start_of_week = now - timedelta(days=now.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    start_of_month = now.replace(day=1)
+    next_month = start_of_month + timedelta(days=32)
+    end_of_month = next_month.replace(day=1) - timedelta(days=1)
+    this_year = now.year
+
+    filter = request.GET.get('filter')
+
+    if filter == 'this_week':
+        payments = Payment.objects.filter(
+            payment_date__gte=start_of_week,
+            payment_date__lte=end_of_week
+        ).order_by('payment_date') 
+    elif filter == 'this_month':
+        payments = Payment.objects.filter(
+            payment_date__gte=start_of_month,
+            payment_date__lte=end_of_month
+        ).order_by('payment_date')
+    elif filter == 'this_year':
+        payments = Payment.objects.filter(
+            payment_date__year=this_year,
+        ).order_by('payment_date')
+
+    total_payments = payments.aggregate(total_payments=Sum('payment'))['total_payments']
+    
+    if total_payments is not None:
+        formatted_total = intcomma(round(total_payments, 2))
+    else:
+        formatted_total = "0.00"
+    
     labels = []
     data = []
     for payment in payments:
-        labels.append(payment.payment_date.strftime('%Y-%m-%d'))
+        # labels.append(payment.payment_date.strftime('%d')) #day number
+        # labels.append(payment.payment_date.strftime('%A')) #day name
+        if filter == 'this_week':
+            labels.append(payment.payment_date.strftime('%A')) 
+        elif filter == 'this_month':
+            labels.append(payment.payment_date.strftime('%d'))
+        elif filter == 'this_year':
+            labels.append(payment.payment_date.strftime('%B')) 
         data.append(payment.payment)
 
     context = {
         'labels': labels,
         'data': data,
+        'total_payments': formatted_total,
     }
 
     return JsonResponse(context)
 
 @login_required
+def updatePendingAppointments(request):
+    pending_appointments = Appointment.objects.filter(status='Pending')
+    appointment_list = []
+    for appointment in pending_appointments:
+        appointment_list.append({
+            'patient_name': f"{appointment.patient.first_name} {appointment.patient.last_name}",
+            'treatment': ', '.join([t.name for t in appointment.treatment.all()]),
+            'date': appointment.appointment_date.strftime('%B %d, %Y'),
+            'time': appointment.start_time.strftime('%I:%M %p')
+        })
+
+    return JsonResponse({'appointments': appointment_list}, safe=True)
+
+@login_required
 def Add(request, instance=None, form_class=None, template=None, redirect_to=None, additional_context=None):
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if request.method == 'POST':
         form = form_class(request.POST, request.FILES, instance=instance)
         if form.is_valid():
             form.save()
-            return redirect(redirect_to)
+            if is_ajax:
+                return JsonResponse({'success': True, 'redirect': redirect_to})
+            else:
+                return redirect(redirect_to)
+        else:
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors})
     else:
         form = form_class(instance=instance)
 
     context = {'form': form}
     
-    # Add additional context if provided
     if additional_context:
         context.update(additional_context)
 
-    return render(request, template, context)
+    if is_ajax:
+        return JsonResponse({'html': render(request, template, context).content.decode('utf-8')})
+    else:
+        return render(request, template, context)
 
 def Save(request, instance=None, form_class=None, additional_context=None):
     if request.method == 'POST':
@@ -501,6 +624,93 @@ def delete(request, pk, obj):
         return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
+def UserAccounts(request):  
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    patients = Patient.objects.select_related('user_account').all()
+    dentists = Dentist.objects.select_related('user_account').all()
+    staffs = Staff.objects.select_related('user_account').all()
+
+    users = []
+
+    for patient in patients:
+        if patient.user_account:
+            users.append({
+                'image': patient.image.url if patient.image else None,
+                'name': f"{patient.first_name} {patient.last_name}",
+                'user_type': 'Patient',
+                'user_account_id': patient.user_account.id,
+                'username': patient.user_account.username,
+                'pk': patient.user_account.id
+            })
+
+    for dentist in dentists:
+        if dentist.user_account:
+            users.append({
+                'image': dentist.image.url if dentist.image else None,
+                'name': dentist.name,
+                'user_type': 'Dentist',
+                'user_account_id': dentist.user_account.id,
+                'username': dentist.user_account.username,
+                'pk': dentist.user_account.id
+            })
+
+    for staff in staffs:
+        if staff.user_account:
+            users.append({
+                'image': staff.image.url if staff.image else None,
+                'name': staff.name,
+                'user_type': 'Staff',
+                'user_account_id': staff.user_account.id,
+                'username': staff.user_account.username,
+                'pk': staff.user_account.id
+            })
+
+    id = request.POST.get('id')
+    user_id = request.POST.get('user_selection')
+    if id:
+        inst = get_object_or_404(CustomUser, pk=id)
+    else:
+        inst = None
+
+    if request.method == 'POST':
+        form = SignupForm(request.POST, request.FILES, instance=inst)
+        if form.is_valid():
+            user = form.save()
+            user_type = form.cleaned_data.get('user_type')
+            if user_type == 'staff':
+                staff, created = Staff.objects.get_or_create(id=user_id)
+                if not created:
+                   staff.user_account = CustomUser.objects.get(id=user.id)
+                   staff.save()
+            elif user_type == 'dentist':
+                dentist, created = Dentist.objects.get_or_create(id=user_id)
+                if not created:
+                    dentist.user_account = CustomUser.objects.get(id=user.id)
+                    dentist.save()
+            elif user_type == 'patient':
+                patient, created = Patient.objects.get_or_create(id=user_id)
+                if not created:
+                    patient.user_account = CustomUser.objects.get(id=user.id)
+                    patient.save()
+
+            if is_ajax:
+                return JsonResponse({'success': True, 'redirect': request.path_info})
+            else:
+                return redirect(request.path_info)
+        else:
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors})
+    else:
+        form = SignupForm(instance=inst)
+
+    context = {
+        'form': form,
+        'users': users
+    }
+
+    return render(request, 'UserAccounts.html', context)
+
+@login_required
 def dentists(request):  
     dentist = Dentist.objects.all()
     id = request.POST.get('id')
@@ -519,6 +729,42 @@ def dentists(request):
     )
 
 @login_required
+def staffs(request):  
+    staff = Staff.objects.all()
+    id = request.POST.get('id')
+    if id:
+        inst = get_object_or_404(Staff, pk=id)
+    else:
+        inst = None
+    additional_context = {'staff': staff}
+    return Add(
+        request,
+        instance=inst,
+        form_class=StaffForm, 
+        template='staff.html',
+        redirect_to=request.path_info,
+        additional_context=additional_context
+    )
+
+# @login_required
+# def Users(request):  
+#     user = CustomUser.objects.all()
+#     id = request.POST.get('id')
+#     if id:
+#         inst = get_object_or_404(Dentist, pk=id)
+#     else:
+#         inst = None
+#     additional_context = {'dentist': dentist}
+#     return Add(
+#         request,
+#         instance=inst,
+#         form_class=DentistForm, 
+#         template='dentist.html',
+#         redirect_to=request.path_info,
+#         additional_context=additional_context
+#     )
+
+@login_required
 def patients(request): 
     patient= Patient.objects.all() 
     additional_context = {'patient': patient}
@@ -527,12 +773,54 @@ def patients(request):
         instance=None,
         form_class=PatientForm, 
         template='Patientlist.html',
-        redirect_to='patients_list',
+        redirect_to=request.path_info,
         additional_context=additional_context
     )
 
 @login_required
 def Patient_info(request, pk):
+    formid = request.POST.get('formid')
+    formid1 = request.POST.get('formid1')
+    medHis_id = request.POST.get('id')
+
+    patient_inst = get_object_or_404(Patient, pk=pk)
+    patient_form = getForm(request, form_class=PatientForm, instance=patient_inst)
+    
+    medhis_inst = get_object_or_404(MedicalHistory, pk=medHis_id) if medHis_id else None
+    medHis_form = getForm(request, form_class=MedicalHistoryForm, instance=medhis_inst)
+    medHis_list = MedicalHistory.objects.filter(patient=patient_inst)
+
+    invoices = Invoice.objects.filter(patient=patient_inst)
+
+    appointments = Appointment.objects.filter(patient=patient_inst).order_by("-appointment_date")
+    
+    if request.method == 'POST':
+        if formid == "PatientForm":
+            if patient_form.is_valid():
+                patient_form.save()
+                return redirect(request.path_info)
+            else:
+                print(patient_form.errors) 
+
+        if formid1 == "MedicalHistoryForm":
+            if medHis_form.is_valid():
+                medHis_form.save()
+                return redirect(request.path_info)
+            else:
+                print(medHis_form.errors) 
+
+    context = {'patient_form': patient_form, 
+               'patient_inst': patient_inst, 
+               'medHis_form': medHis_form, 
+               'medHis_list': medHis_list,
+               'invoices': invoices,
+               'appointments': appointments,
+               }
+    
+    return render(request, 'Patientdetails.html', context)
+
+@login_required
+def User_Profile(request, pk):
     formid = request.POST.get('formid')
     formid1 = request.POST.get('formid1')
     medHis_id = request.POST.get('id')
@@ -606,8 +894,16 @@ def Delete_treatment(request, pk):
     return delete(request, pk, Treatment)
 
 @login_required
+def Delete_user(request, pk):
+    return delete(request, pk, CustomUser)
+
+@login_required
 def Delete_dentist(request, pk):
     return delete(request, pk, Dentist)
+
+@login_required
+def Delete_staff(request, pk):
+    return delete(request, pk, Staff)
 
 @login_required
 def Delete_medHis(request, pk):
@@ -657,7 +953,36 @@ def calendar(request):
     return render(request, 'Calendar.html', context)
 
 @login_required
+def update_appointment_status(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            pk = data.get('pk')
+            reason = data.get('reason')
+            status = data.get('status')
+            print(pk, reason, status)
+            
+            # appointment = Appointment.objects.filter(pk=pk)
+            # appointment.update(cancellation_reason=reason, status=status)
+
+            # if appointment.status in ['Confirmed', 'Cancelled', 'Pending', 'No Show', 'Completed']:
+            #     send_appointment_email(appointment, appointment.patient)
+            appointment = Appointment.objects.get(pk=pk)
+            appointment.cancellation_reason = reason
+            appointment.status = status
+            appointment.save()
+
+            if appointment.status in ['Confirmed', 'Cancelled', 'Pending', 'No Show', 'Completed']:
+                send_appointment_email(appointment, appointment.patient)
+                
+            return JsonResponse({'success': True})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
 def appointments(request):  
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     appointment = Appointment.objects.all()
     id = request.POST.get('id')
     if id:
@@ -680,10 +1005,44 @@ def appointments(request):
             a.end_time = end_datetime.time()
             a.save()
 
-            notification_id = 1
-            Notification.objects.filter(id=notification_id).update(is_read=True)
+            # notification_id = 1
+            # Notification.objects.filter(id=notification_id).update(is_read=True)
 
-            return redirect(request.path_info)
+            # Assuming this is part of a view where 'a' is the newly created appointment
+            appointment_inst = get_object_or_404(Appointment, pk=a.id)
+            patient = appointment_inst.patient
+
+            # Create a notification for the patient
+            Notification.objects.create(
+                appointment=appointment_inst,
+                user=patient.user_account,
+                patient=patient,
+                message=f"Your appointment request has been received and is being processed."
+            )
+
+            # Send a real-time notification via channels
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"user_{patient.user_account.id}",  # Channel group for the patient
+                {
+                    "type": "send_notification",
+                    'appointment_id': appointment_inst.id,
+                    "message": "Your appointment request has been received",
+                    "patient_image_url": patient.image.url if patient.image else None,
+                    "timestamp": timezone.now().isoformat(),
+                }
+            )
+
+            if appointment_inst.status in ['Confirmed', 'Cancelled', 'Pending', 'No Show', 'Completed']:
+                send_appointment_email(appointment_inst, patient)
+
+            if is_ajax:
+                return JsonResponse({'success': True, 'redirect': request.path_info})
+            else:
+                return redirect(request.path_info)
+        else:
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors})
     else:
         form = AppointmentForm(instance=inst)
 
@@ -736,6 +1095,31 @@ def getpayForm(request):
     return JsonResponse({'form': form})
 
 @login_required
+def get_user_choices(request):
+    user_type = request.GET.get('user_type')
+    choices = []
+    if user_type == 'staff':
+        choices = [(staff.id, f"{staff.name}") for staff in Staff.objects.filter(user_account__isnull=True)]
+    elif user_type == 'dentist':
+        choices = [(dentist.id, f"{dentist.name}") for dentist in Dentist.objects.filter(user_account__isnull=True)]
+    elif user_type == 'patient':
+        choices = [(patient.id, f"{patient.first_name} {patient.last_name}") for patient in Patient.objects.filter(user_account__isnull=True)]
+    return JsonResponse(choices, safe=False)
+
+@login_required
+def getUserForm(request):
+    id = request.GET.get('id', None)  
+    if id:
+        user = get_object_or_404(CustomUser, pk=id) 
+        form_html = SignupForm(instance=user)
+    else:
+        form_html = SignupForm()  
+
+    form = form_html.as_p()  
+
+    return JsonResponse({'form': form})
+
+@login_required
 def getDentistForm(request):
     id = request.GET.get('id', None)  # Get the payment ID from the AJAX request
     if id:
@@ -743,6 +1127,20 @@ def getDentistForm(request):
         form_html = DentistForm(instance=dentist)
     else:
         form_html = DentistForm()  # If no ID, provide an empty form for new entry
+
+    # Render the form as HTML
+    form = form_html.as_p()  # Or form.as_table() depending on your form rendering
+
+    return JsonResponse({'form': form})
+
+@login_required
+def getStaffForm(request):
+    id = request.GET.get('id', None)  # Get the payment ID from the AJAX request
+    if id:
+        staff = get_object_or_404(Staff, pk=id)  # Fetch the payment if ID exists
+        form_html = StaffForm(instance=staff)
+    else:
+        form_html = StaffForm()  # If no ID, provide an empty form for new entry
 
     # Render the form as HTML
     form = form_html.as_p()  # Or form.as_table() depending on your form rendering
@@ -767,15 +1165,29 @@ def getmedhisForm(request):
 def getAppointmentForm(request):
     id = request.GET.get('id', None)  # Get the payment ID from the AJAX request
     if id:
-        appointment = get_object_or_404(Appointment, pk=id)  # Fetch the payment if ID exists
+        appointment = get_object_or_404(Appointment, pk=id)
         form_html = AppointmentForm(instance=appointment)
+    
+        appointment_data = {
+            'id': appointment.id,
+            'patient_name': f"{appointment.patient.first_name} {appointment.patient.last_name}",
+            'patient_image_url': appointment.patient.image.url if appointment.patient.image else None,
+            'date': appointment.appointment_date.strftime('%Y-%m-%d'),
+            'start_time': appointment.start_time.strftime('%H:%M'),
+            'end_time': appointment.end_time.strftime('%H:%M') if appointment.end_time else None,
+            'status': appointment.status,
+            'notes': appointment.notes,
+            'treatments': [treatment.name for treatment in appointment.treatment.all()],
+            # Add any other fields you need
+        }
     else:
-        form_html = AppointmentForm()  # If no ID, provide an empty form for new entry
+        form_html = AppointmentForm()
+        appointment_data = None
 
     # Render the form as HTML
     form = form_html.as_p()  # Or form.as_table() depending on your form rendering
 
-    return JsonResponse({'form': form})
+    return JsonResponse({'form': form, 'appointment_data': appointment_data})
 
 @login_required
 def getTreatmentForm(request):
@@ -942,7 +1354,6 @@ def appointment_list(request):
                 'end': f'{appointment.appointment_date}T{appointment.end_time}', 
                 'treatments': treatments  # Add the treatments as a list
             })
-        print(events)
         return JsonResponse(events, safe=False)
 
 @login_required
@@ -1004,3 +1415,110 @@ def delete_appointment(request, appointment_id):
     if request.method == 'POST':
         Appointment.objects.filter(id=appointment_id).delete()
         return HttpResponse(status=204)
+
+def send_appointment_email(appointment_inst, patient):
+    clinic_name = Clinic_Info.objects.first().clinic_name  # Assuming you have a Clinic_Info model
+    appointment_date = appointment_inst.appointment_date.strftime('%A, %B %d, %Y')
+    appointment_time = appointment_inst.start_time.strftime('%I:%M %p')
+    user_email = patient.email
+
+    if appointment_inst.status == 'Confirmed':
+        email_subject = f"Appointment Confirmation - {clinic_name}"
+        email_message = f"""
+Dear {patient.first_name} {patient.last_name},
+
+We are pleased to confirm your appointment at {clinic_name} has been scheduled for:
+
+Date: {appointment_date}
+Time: {appointment_time}
+
+Please arrive 10-15 minutes before your scheduled time to complete any necessary paperwork.
+
+If you need to reschedule or cancel your appointment, please contact us at least 24 hours in advance or visit and login to our website to reschedule or cancel your appointment.
+
+If you have any questions or special requirements, please don't hesitate to contact us.
+
+We look forward to seeing you soon!
+
+Best regards,
+The Team at {clinic_name}
+        """
+    elif appointment_inst.status == 'Cancelled':
+        email_subject = f"Appointment Cancellation - {clinic_name}"
+        email_message = f"""
+Dear {patient.first_name} {patient.last_name},
+
+We regret to inform you that your appointment scheduled for {appointment_date} at {appointment_time} has been cancelled.
+
+If you did not request this cancellation or if you would like to reschedule, please contact our office as soon as possible or visit and login to our website to reschedule or cancel your appointment.
+
+We apologize for any inconvenience this may have caused.
+
+Best regards,
+The Team at {clinic_name}
+        """
+    elif appointment_inst.status == 'Pending':
+        email_subject = f"Appointment Request Received - {clinic_name}"
+        email_message = f"""
+Dear {patient.first_name} {patient.last_name},
+
+We have received your appointment request for {appointment_date} at {appointment_time}.
+
+Our team is currently reviewing your request and will confirm your appointment shortly. If we need any additional information, we will contact you.
+
+Thank you for choosing {clinic_name} for your dental care needs.
+
+Best regards,
+The Team at {clinic_name}
+        """
+    elif appointment_inst.status == 'No Show':
+        email_subject = f"Missed Appointment - {clinic_name}"
+        email_message = f"""
+Dear {patient.first_name} {patient.last_name},
+
+We noticed that you missed your scheduled appointment on {appointment_date} at {appointment_time}.
+
+We understand that unforeseen circumstances can arise. If you would like to reschedule, please contact our office at your earliest convenience.
+
+Regular dental check-ups are important for maintaining your oral health. We look forward to seeing you soon.
+
+Best regards,
+The Team at {clinic_name}
+        """
+    elif appointment_inst.status == 'Completed':
+        email_subject = f"Appointment Completed - {clinic_name}"
+        email_message = f"""
+Dear {patient.first_name} {patient.last_name},
+
+Thank you for visiting {clinic_name} for your appointment on {appointment_date}.
+
+We hope that your experience with us was satisfactory. If you have any questions about your treatment or if there's anything else we can assist you with, please don't hesitate to contact us.
+
+Remember to schedule your next check-up to maintain your oral health.
+
+We appreciate your trust in our care and look forward to seeing you again.
+
+Best regards,
+The Team at {clinic_name}
+        """
+    else:
+        # Default message for any other status
+        email_subject = f"Appointment Update - {clinic_name}"
+        email_message = f"""
+Dear {patient.full_name},
+
+There has been an update to your appointment scheduled for {appointment_date} at {appointment_time}.
+
+Please contact our office for more information or if you have any questions.
+
+Best regards,
+The Team at {clinic_name}
+        """
+
+    send_mail(
+        email_subject,
+        email_message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user_email],
+        fail_silently=False,
+    )

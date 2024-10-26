@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, UserChangeForm, PasswordChangeForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from .models import Clinic_Info, CustomUser, Dentist, Invoice_items, Invoice, Patient, Appointment, Treatment, Payment, MedicalHistory
+from .models import Staff, Clinic_Info, CustomUser, Dentist, Invoice_items, Invoice, Patient, Appointment, Treatment, Payment, MedicalHistory
 from datetime import date
 
 class CustomPasswordChangeForm(PasswordChangeForm):
@@ -30,9 +30,20 @@ class LoginForm(AuthenticationForm):
     )
 
 class SignupForm(UserCreationForm):
+    USER_TYPE_CHOICES = [
+        ('staff', 'Staff'),
+        ('dentist', 'Dentist'),
+        ('patient', 'Patient'),
+    ]
+
+    user_type = forms.ChoiceField(
+        choices=USER_TYPE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select', 'placeholder': 'Select User Type'})
+    )
+
     class Meta:
         model = CustomUser
-        fields = ('username', 'password1', 'password2',)
+        fields = ('username', 'password1', 'password2', 'user_type')
     
     username = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your Username'})
@@ -43,6 +54,18 @@ class SignupForm(UserCreationForm):
     password2 = forms.CharField(
         label="Confirm Password", widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Repeat your Password'})
     )
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user_type = self.cleaned_data.get('user_type')
+        
+        user.is_staff = user_type == 'staff'
+        user.is_dentist = user_type == 'dentist'
+        user.is_patient = user_type == 'patient'
+        
+        if commit:
+            user.save()
+        return user
 
 class ClinicForm(forms.ModelForm):
     class Meta:
@@ -125,6 +148,38 @@ class DentistForm(forms.ModelForm):
             }),
         }
 
+class StaffForm(forms.ModelForm):
+    class Meta:
+        model = Staff
+        fields = ('name', 'gender', 'address', 'contact_no', 'email', 'image')
+
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your Name',
+            }),
+            'gender': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter gender',
+            }),
+            'address': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your Address',
+            }),
+            'contact_no': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your Contact Number',
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your Email address',
+            }),
+            'image': forms.ClearableFileInput(attrs={
+            'class': 'form-control mb-2', 
+            'accept': 'image/*'
+            }),
+        }
+
 class PatientForm(forms.ModelForm):
     Gender_choices = (
         ("Male", "Male"),
@@ -180,9 +235,10 @@ class PatientForm(forms.ModelForm):
 class AppointmentForm(forms.ModelForm):
     status_choices = (
         ("Pending", "Pending"),
-        ("Approved", "Approved"),
+        ("Confirmed", "Confirmed"),
         ("Cancelled", "Cancelled"),
         ("No Show", "No Show"),
+        ('Completed', 'Completed'),
     )
     class Meta:
         model = Appointment
@@ -318,3 +374,28 @@ class Invoice_itemsForm(forms.ModelForm):
             'data-kt-element': 'price'
             }),
         }
+
+class ChangePasswordForm(PasswordChangeForm):
+    old_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your current password'
+        })
+    )
+    new_password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your new password'
+        })
+    )
+    new_password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm your new password'
+        })
+    )
+
+    def __init__(self, *args, **kwargs):
+        super(ChangePasswordForm, self).__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].label = field.replace('_', ' ').capitalize()

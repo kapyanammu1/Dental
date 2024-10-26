@@ -23,6 +23,7 @@
 		<!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
 		<link href="{% static 'assets/plugins/global/plugins.bundle.css' %}" rel="stylesheet" type="text/css" />
 		<link href="{% static 'assets/css/style.bundle.css' %}" rel="stylesheet" type="text/css" />
+		<link href="{% static 'assets/css/appoitnmentcard.css' %}" rel="stylesheet" type="text/css" />
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
 		<!--end::Global Stylesheets Bundle-->
 		<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
@@ -225,131 +226,6 @@
 										<div class="menu-item px-5">
 											<a href="account/overview.html" class="menu-link px-5">My Profile</a>
 										</div>
-										<!--end::Menu item-->
-										<!--begin::Menu item-->
-										<div class="menu-item px-5">
-											<a href="apps/projects/list.html" class="menu-link px-5">
-												<span class="menu-text">My Projects</span>
-												<span class="menu-badge">
-													<span class="badge badge-light-danger badge-circle fw-bold fs-7">3</span>
-												</span>
-											</a>
-										</div>
-										<!--end::Menu item-->
-										<!--begin::Menu item-->
-										<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
-											<a href="#" class="menu-link px-5">
-												<span class="menu-title">My Subscription</span>
-												<span class="menu-arrow"></span>
-											</a>
-											<!--begin::Menu sub-->
-											<div class="menu-sub menu-sub-dropdown w-175px py-4">
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/referrals.html" class="menu-link px-5">Referrals</a>
-												</div>
-												<!--end::Menu item-->
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/billing.html" class="menu-link px-5">Billing</a>
-												</div>
-												<!--end::Menu item-->
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/statements.html" class="menu-link px-5">Payments</a>
-												</div>
-												<!--end::Menu item-->
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/statements.html" class="menu-link d-flex flex-stack px-5">Statements 
-													<span class="ms-2 lh-0" data-bs-toggle="tooltip" title="View your statements">
-														<i class="ki-duotone ki-information-5 fs-5">
-															<span class="path1"></span>
-															<span class="path2"></span>
-															<span class="path3"></span>
-														</i>
-													</span></a>
-												</div>
-												<!--end::Menu item-->
-												<!--begin::Menu separator-->
-												<div class="separator my-2"></div>
-												<!--end::Menu separator-->
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<div class="menu-content px-3">
-														<label class="form-check form-switch form-check-custom form-check-solid">
-															<input class="form-check-input w-30px h-20px" type="checkbox" value="1" checked="checked" name="notifications" />
-															<span class="form-check-label text-muted fs-7">Notifications</span>
-														</label>
-													</div>
-												</div>
-												<!--end::Menu item-->
-											</div>
-											<!--end::Menu sub-->
-										</div>
-										<!--end::Menu item-->
-										<!--begin::Menu item-->
-										<div class="menu-item px-5">
-											<a href="account/statements.html" class="menu-link px-5">My Statements</a>
-										</div>
-										<!--end::Menu item-->
-										<!--begin::Menu separator-->
-										<div class="separator my-2"></div>
-										<!--end::Menu separator-->
-										<!--begin::Menu item-->
-										<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
-											<a href="#" class="menu-link px-5">
-												<span class="menu-title position-relative">Language 
-												<span class="fs-8 rounded bg-light px-3 py-2 position-absolute translate-middle-y top-50 end-0">English 
-												<img class="w-15px h-15px rounded-1 ms-2" src="{% static 'assets/media/flags/united-states.svg' %}" alt="" /></span></span>
-											</a>
-											<!--begin::Menu sub-->
-											<div class="menu-sub menu-sub-dropdown w-175px py-4">
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/settings.html" class="menu-link d-flex px-5 active">
-													<span class="symbol symbol-20px me-4">
-														<img class="rounded-1" src="{% static 'assets/media/flags/united-states.svg' %}" alt="" />
-													</span>English</a>
-												</div>
-												<!--end::Menu item-->
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/settings.html" class="menu-link d-flex px-5">
-													<span class="symbol symbol-20px me-4">
-														<img class="rounded-1" src="{% static 'assets/media/flags/spain.svg' %}" alt="" />
-													</span>Spanish</a>
-												</div>
-												<!--end::Menu item-->
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/settings.html" class="menu-link d-flex px-5">
-													<span class="symbol symbol-20px me-4">
-														<img class="rounded-1" src="{% static 'assets/media/flags/germany.svg' %}" alt="" />
-													</span>German</a>
-												</div>
-												<!--end::Menu item-->
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/settings.html" class="menu-link d-flex px-5">
-													<span class="symbol symbol-20px me-4">
-														<img class="rounded-1" src="{% static 'assets/media/flags/japan.svg' %}" alt="" />
-													</span>Japanese</a>
-												</div>
-												<!--end::Menu item-->
-												<!--begin::Menu item-->
-												<div class="menu-item px-3">
-													<a href="account/settings.html" class="menu-link d-flex px-5">
-													<span class="symbol symbol-20px me-4">
-														<img class="rounded-1" src="{% static 'assets/media/flags/france.svg' %}" alt="" />
-													</span>French</a>
-												</div>
-												<!--end::Menu item-->
-											</div>
-											<!--end::Menu sub-->
-										</div>
-										<!--end::Menu item-->
-										<!--begin::Menu item-->
 										<div class="menu-item px-5 my-1">
 											<a href="account/settings.html" class="menu-link px-5">Account Settings</a>
 										</div>
@@ -390,7 +266,9 @@
 						<div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
 							<!--begin::Logo image-->
 							<a href="{% url 'index' %}">
-								<img alt="Logo" src="{% static 'assets/media/logos/default-dark.svg' %}" class="h-30px app-sidebar-logo-default" />
+								<div class="d-flex justify-content-center align-items-center">
+									<img alt="{{ clinic_info.name }} Logo" src="{{ clinic_info.logo }}" class="h-50px app-sidebar-logo-default" />
+								</div>
 							</a>
 							<!--end::Logo image-->
 							<!--begin::Sidebar toggle-->
@@ -415,14 +293,14 @@
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-category fs-2">
+													<i class="fas fa-chart-line fs-2">
 														<span class="path1"></span>
 														<span class="path2"></span>
 														<span class="path3"></span>
 														<span class="path4"></span>
 													</i>
 												</span>
-												<span class="menu-title">Dashboards</span>
+												<span class="menu-title">Dashboard</span>
 											</a>
 										</div>
 										<!--begin:Menu item-->
@@ -435,7 +313,7 @@
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'patients_list' %}active{% endif %}" href="{% url 'patients_list' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-people fs-1">
+													<i class="fas fa-id-card fs-1">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -449,7 +327,7 @@
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'Dentist_list' %}active{% endif %}" href="{% url 'Dentist_list' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-profile-user fs-2x">
+													<i class="fas fa-user-md fs-2x">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -461,9 +339,9 @@
 											</a>
 										</div>
 										<div class="menu-item">
-											<a class="menu-link {% if request.resolver_match.url_name == 'user_Signup' %}active{% endif %}" href="{% url 'user_Signup' %}">
+											<a class="menu-link {% if request.resolver_match.url_name == 'Staff_list' %}active{% endif %}" href="{% url 'Staff_list' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-user fs-2x">
+													<i class="fas fa-user-tie fs-2x">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -471,9 +349,24 @@
 													<span class="path5"></span>
 													</i>
 												</span>
-												<span class="menu-title">Users</span>
+												<span class="menu-title">Staffs</span>
 											</a>
 										</div>
+										<div class="menu-item">
+											<a class="menu-link {% if request.resolver_match.url_name == 'User_list' %}active{% endif %}" href="{% url 'User_list' %}">
+												<span class="menu-icon">
+													<i class="fas fa-user fs-2x">
+													<span class="path1"></span>
+													<span class="path2"></span>
+													<span class="path3"></span>
+													<span class="path4"></span>
+													<span class="path5"></span>
+													</i>
+												</span>
+												<span class="menu-title">User Accounts</span>
+											</a>
+										</div>
+										
 
 										<div class="menu-item pt-5">
 											<div class="menu-content">
@@ -484,7 +377,7 @@
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'Treatment_list' %}active{% endif %}" href="{% url 'Treatment_list' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-questionnaire-tablet fs-2x">
+													<i class="fas fa-tooth fs-2x">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -492,7 +385,7 @@
 													<span class="path5"></span>
 													</i>
 												</span>
-												<span class="menu-title">Treatments/Services List</span>
+												<span class="menu-title">Treatments/Services</span>
 											</a>
 										</div>
 
@@ -505,7 +398,7 @@
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'Calendar' %}active{% endif %}" href="{% url 'Calendar' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-calendar-8 fs-2x">
+													<i class="far fa-calendar fs-2x">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -519,7 +412,7 @@
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'Appointment_list' %}active{% endif %}" href="{% url 'Appointment_list' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-calendar-add fs-2x">
+													<i class="far fa-clock fs-2x">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -527,7 +420,7 @@
 													<span class="path5"></span>
 													</i>
 												</span>
-												<span class="menu-title">Appointments List</span>
+												<span class="menu-title">Appointments</span>
 											</a>
 										</div>
 
@@ -540,7 +433,7 @@
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'Invoice_list' %}active{% endif %}" href="{% url 'Invoice_list' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-bill fs-2x">
+													<i class="fas fa-file-invoice fs-2x">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -548,13 +441,13 @@
 													<span class="path5"></span>
 													</i>
 												</span>
-												<span class="menu-title">Invoice List</span>
+												<span class="menu-title">Invoices</span>
 											</a>
 										</div>
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'Payment_list' %}active{% endif %}" href="{% url 'Payment_list' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-dollar fs-2x">
+													<i class="fas fa-money-bill-wave fs-2x">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -562,7 +455,7 @@
 													<span class="path5"></span>
 													</i>
 												</span>
-												<span class="menu-title">Payment List</span>
+												<span class="menu-title">Payments</span>
 											</a>
 										</div>
 
@@ -575,7 +468,7 @@
 										<div class="menu-item">
 											<a class="menu-link {% if request.resolver_match.url_name == 'Clinic_Info' %}active{% endif %}" href="{% url 'Clinic_Info' %}">
 												<span class="menu-icon">
-													<i class="ki-duotone ki-information-3 fs-2x">
+													<i class="fas fa-clinic-medical fs-2x">
 													<span class="path1"></span>
 													<span class="path2"></span>
 													<span class="path3"></span>
@@ -731,42 +624,60 @@
             
 			<div class="modal-dialog modal-dialog-centered mw-650px">
 				<!--begin::Modal content-->
-				<div class="modal-content">
+				<div class="modal-content shadow-lg rounded-4 border-0">
 					<!--begin::Form-->
 					<form class="form" method="post" enctype="multipart/form-data" id="notif_form">
 						<!--begin::Modal header-->
                         <input type="hidden" name="id" id="notif_id">
-						<div class="modal-header" id="kt_modal_add_customer_header">
+						<div class="modal-header bg-light p-4 border-bottom-0">
 							<!--begin::Modal title-->
-							<h2 class="fw-bold">Add/Update a Dentist</h2>
+							<h2 class="fw-bold text-primary">Appointment Request</h2>
 							<!--end::Modal title-->
 							<!--begin::Close-->
-							<div id="btn-close" class="btn btn-icon btn-sm btn-active-icon-primary">
-								<i class="ki-duotone ki-cross fs-1">
-									<span class="path1"></span>
-									<span class="path2"></span>
-								</i>
-							</div>
+							<button type="button" id="btn-close" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 							<!--end::Close-->
 						</div>
 						<!--end::Modal header-->
 						<!--begin::Modal body-->
-						<div class="modal-body py-10 px-lg-17">
+						<div class="modal-body p-4">
 							{% csrf_token %}
 							<!--begin::Scroll-->
 							
-							<div class="scroll-y me-n7 pe-7" id="kt_modal_add_customer_scroll" data-kt-scroll="true" data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-max-height="auto" data-kt-scroll-dependencies="#kt_modal_add_customer_header" data-kt-scroll-wrappers="#kt_modal_add_customer_scroll" data-kt-scroll-offset="300px">
-								<div id="modal-notif-form-body">
+							<div class="scroll-y me-n3 pe-3" id="kt_modal_add_customer_scroll" data-kt-scroll="true" data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-max-height="auto" data-kt-scroll-dependencies="#kt_modal_add_customer_header" data-kt-scroll-wrappers="#kt_modal_add_customer_scroll" data-kt-scroll-offset="300px">
+								<div id="modal-notif-form-body" class="bg-white rounded-3 p-4 shadow-sm">
 									
+								</div>
+								
+								<!-- Cancellation reason field (hidden by default) -->
+								<div id="cancellation-reason-container" class="mt-4 d-none">
+									<label for="cancellation-reason" class="form-label">Cancellation Reason</label>
+									<textarea id="cancellation-reason" name="cancellation_reason" class="form-control" rows="3" placeholder="Please provide a reason for cancellation"></textarea>
 								</div>
 							</div>
 						</div>
-						<div class="modal-footer flex-center">
-							<button type="reset" id="btn-notif-cancel" class="btn btn-light me-3">Discard</button>
-							<button type="submit" id="btn-notif-submit" class="btn btn-primary">
-								<span class="indicator-label">Submit</span>
-								<span class="indicator-progress">Please wait... 
-								<span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+						<div class="modal-footer bg-light p-4 border-top-0">
+							<button type="button" id="btn-notif-cancel" class="btn btn-light-primary me-3">
+								<i class="fas fa-times me-2"></i>Close
+							</button>
+							<button type="button" id="btn-notif-cancel-appointment" class="btn btn-danger me-3">
+								<span class="indicator-label">
+									<i class="fas fa-ban me-2"></i>Cancel Appointment
+								</span>
+								<span class="indicator-progress" style="display: none;">
+									Please wait... 
+									<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+								</span>
+							</button>
+							<button type="submit" id="btn-notif-submit" class="btn btn-primary" 
+							data-appointment-id=""
+							data-reason="">
+								<span class="indicator-label">
+									<i class="fas fa-check me-2"></i>Approve
+								</span>
+								<span class="indicator-progress">
+									Please wait... 
+									<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+								</span>
 							</button>
 						</div>
 					</form>
